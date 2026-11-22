@@ -65,6 +65,10 @@ void St7789::SoftwareReset() {
   // If sleep in: must wait 120ms before sleep out can sent (see driver datasheet)
   // Unconditionally wait as software reset doesn't need to be performant
   sleepIn = true;
+  lastColStart = 0xFFFF;
+  lastColEnd = 0xFFFF;
+  lastRowStart = 0xFFFF;
+  lastRowEnd = 0xFFFF;
   lastSleepExit = xTaskGetTickCount();
   vTaskDelay(pdMS_TO_TICKS(125));
 }
@@ -217,24 +221,27 @@ void St7789::GateControl() {
 }
 
 void St7789::SetAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
-  WriteCommand(static_cast<uint8_t>(Commands::ColumnAddressSet));
-  uint8_t colArgs[] = {
-    static_cast<uint8_t>(x0 >> 8), // x start MSB
-    static_cast<uint8_t>(x0),      // x start LSB
-    static_cast<uint8_t>(x1 >> 8), // x end MSB
-    static_cast<uint8_t>(x1)       // x end LSB
-  };
-  WriteData(colArgs, sizeof(colArgs));
+  if (x0 != lastColStart || x1 != lastColEnd) {
+    lastColStart = x0;
+    lastColEnd = x1;
+    WriteCommand(static_cast<uint8_t>(Commands::ColumnAddressSet));
+    colWindowArgs[0] = static_cast<uint8_t>(x0 >> 8);
+    colWindowArgs[1] = static_cast<uint8_t>(x0);
+    colWindowArgs[2] = static_cast<uint8_t>(x1 >> 8);
+    colWindowArgs[3] = static_cast<uint8_t>(x1);
+    WriteData(colWindowArgs, sizeof(colWindowArgs));
+  }
 
-  WriteCommand(static_cast<uint8_t>(Commands::RowAddressSet));
-  uint8_t rowArgs[] = {
-    static_cast<uint8_t>(y0 >> 8), // y start MSB
-    static_cast<uint8_t>(y0),      // y start LSB
-    static_cast<uint8_t>(y1 >> 8), // y end MSB
-    static_cast<uint8_t>(y1)       // y end LSB
-  };
-  memcpy(addrWindowArgs, rowArgs, sizeof(rowArgs));
-  WriteData(addrWindowArgs, sizeof(addrWindowArgs));
+  if (y0 != lastRowStart || y1 != lastRowEnd) {
+    lastRowStart = y0;
+    lastRowEnd = y1;
+    WriteCommand(static_cast<uint8_t>(Commands::RowAddressSet));
+    addrWindowArgs[0] = static_cast<uint8_t>(y0 >> 8);
+    addrWindowArgs[1] = static_cast<uint8_t>(y0);
+    addrWindowArgs[2] = static_cast<uint8_t>(y1 >> 8);
+    addrWindowArgs[3] = static_cast<uint8_t>(y1);
+    WriteData(addrWindowArgs, sizeof(addrWindowArgs));
+  }
 }
 
 void St7789::WriteToRam(const uint8_t* data, size_t size) {
@@ -279,6 +286,10 @@ void St7789::HardwareReset() {
   // If hardware reset started while sleep out, reset time may be up to 120ms
   // Unconditionally wait as hardware reset doesn't need to be performant
   sleepIn = true;
+  lastColStart = 0xFFFF;
+  lastColEnd = 0xFFFF;
+  lastRowStart = 0xFFFF;
+  lastRowEnd = 0xFFFF;
   lastSleepExit = xTaskGetTickCount();
   vTaskDelay(pdMS_TO_TICKS(125));
 }
@@ -297,6 +308,10 @@ void St7789::LowPowerOff() {
 
 void St7789::Sleep() {
   SleepIn();
+  lastColStart = 0xFFFF;
+  lastColEnd = 0xFFFF;
+  lastRowStart = 0xFFFF;
+  lastRowEnd = 0xFFFF;
   nrf_gpio_cfg_default(pinDataCommand);
   NRF_LOG_INFO("[LCD] Sleep");
 }
@@ -304,6 +319,10 @@ void St7789::Sleep() {
 void St7789::Wakeup() {
   nrf_gpio_cfg_output(pinDataCommand);
   SleepOut();
+  lastColStart = 0xFFFF;
+  lastColEnd = 0xFFFF;
+  lastRowStart = 0xFFFF;
+  lastRowEnd = 0xFFFF;
   VerticalScrollStartAddress(verticalScrollingStartAddress);
   DisplayOn();
   NRF_LOG_INFO("[LCD] Wakeup")

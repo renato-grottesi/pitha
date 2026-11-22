@@ -145,7 +145,7 @@ WatchFaceLegend::WatchFaceLegend(Controllers::DateTime& dateTimeController,
   lv_obj_set_auto_realign(weatherIcon, true);
 
   Refresh();
-  taskRefresh = lv_task_create(RefreshTaskCallback, LV_DISP_DEF_REFR_PERIOD, LV_TASK_PRIO_MID, this);
+  taskRefresh = lv_task_create(RefreshTaskCallback, 250, LV_TASK_PRIO_MID, this);
 }
 
 WatchFaceLegend::~WatchFaceLegend() {

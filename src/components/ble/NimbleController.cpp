@@ -49,6 +49,7 @@ NimbleController::NimbleController(Pinetime::System::SystemTask& systemTask,
     heartRateService {*this, heartRateController},
     motionService {*this, motionController},
     fsService {systemTask, fs},
+    haService {*this},
     serviceDiscovery({&currentTimeClient, &alertNotificationClient}) {
 }
 
@@ -98,6 +99,7 @@ void NimbleController::Init() {
   heartRateService.Init();
   motionService.Init();
   fsService.Init();
+  haService.Init();
 
   int rc;
   rc = ble_hs_util_ensure_addr(0);
@@ -132,11 +134,15 @@ void NimbleController::Init() {
   ASSERT(rc == 0);
 
   RestoreBond();
+  LoadTrustedPeers();
 
   StartAdvertising();
 }
 
 void NimbleController::StartAdvertising() {
+  if (ble_gap_adv_active()) {
+    ble_gap_adv_stop();
+  }
   struct ble_gap_adv_params adv_params;
   struct ble_hs_adv_fields fields;
   struct ble_hs_adv_fields rsp_fields;
@@ -169,6 +175,8 @@ void NimbleController::StartAdvertising() {
   rsp_fields.name = reinterpret_cast<const uint8_t*>(deviceName);
   rsp_fields.name_len = strlen(deviceName);
   rsp_fields.name_is_complete = 1;
+  rsp_fields.mfg_data = haService.GetMfgAdvData();
+  rsp_fields.mfg_data_len = haService.GetMfgAdvDataLen();
 
   int rc;
   rc = ble_gap_adv_set_fields(&fields);
@@ -207,7 +215,21 @@ int NimbleController::OnGAPEvent(ble_gap_event* event) {
       } else {
         connectionHandle = event->connect.conn_handle;
         bleController.Connect();
-        systemTask.PushMessage(Pinetime::System::Messages::BleConnected);
+
+        struct ble_gap_conn_desc desc;
+        Pinetime::Controllers::Ble::BleAddress peerAddr = {0};
+        if (ble_gap_conn_find(connectionHandle, &desc) == 0) {
+          std::memcpy(peerAddr.data(), desc.peer_id_addr.val, peerAddr.size());
+        }
+        bleController.PeerAddress(peerAddr);
+
+        if (IsPeerTrusted(peerAddr)) {
+          bleController.PendingConnectionApproval(false);
+          systemTask.PushMessage(Pinetime::System::Messages::BleConnected);
+        } else {
+          bleController.PendingConnectionApproval(true);
+          systemTask.PushMessage(Pinetime::System::Messages::OnPairing);
+        }
         // Service discovery is deferred via systemtask
       }
       break;
@@ -224,6 +246,7 @@ int NimbleController::OnGAPEvent(ble_gap_event* event) {
       currentTimeClient.Reset();
       alertNotificationClient.Reset();
       connectionHandle = BLE_HS_CONN_HANDLE_NONE;
+      bleController.PendingConnectionApproval(false);
       if (bleController.IsConnected()) {
         bleController.Disconnect();
         fastAdvCount = 0;
@@ -328,9 +351,11 @@ int NimbleController::OnGAPEvent(ble_gap_event* event) {
       } else if (event->subscribe.prev_notify == 0 && event->subscribe.cur_notify == 1) {
         heartRateService.SubscribeNotification(event->subscribe.attr_handle);
         motionService.SubscribeNotification(event->subscribe.attr_handle);
+        haService.OnSubscribe(event->subscribe.attr_handle, true);
       } else if (event->subscribe.prev_notify == 1 && event->subscribe.cur_notify == 0) {
         heartRateService.UnsubscribeNotification(event->subscribe.attr_handle);
         motionService.UnsubscribeNotification(event->subscribe.attr_handle);
+        haService.OnSubscribe(event->subscribe.attr_handle, false);
       }
       break;
 
@@ -420,6 +445,28 @@ void NimbleController::DisableRadio() {
   }
 }
 
+void NimbleController::RestartBluetooth() {
+  bleController.PendingConnectionApproval(false);
+  bleController.EnableRadio();
+  fastAdvCount = 0;
+
+  if (connectionHandle != BLE_HS_CONN_HANDLE_NONE) {
+    int rc = ble_gap_terminate(connectionHandle, BLE_ERR_REM_USER_CONN_TERM);
+    if (rc != 0) {
+      currentTimeClient.Reset();
+      alertNotificationClient.Reset();
+      connectionHandle = BLE_HS_CONN_HANDLE_NONE;
+      bleController.Disconnect();
+      StartAdvertising();
+    }
+  } else {
+    currentTimeClient.Reset();
+    alertNotificationClient.Reset();
+    bleController.Disconnect();
+    StartAdvertising();
+  }
+}
+
 void NimbleController::PersistBond(struct ble_gap_conn_desc& desc) {
   union ble_store_key key;
   union ble_store_value our_sec, peer_sec, peer_cccd_set[MYNEWT_VAL(BLE_STORE_MAX_CCCDS)] = {0};
@@ -502,5 +549,74 @@ void NimbleController::RestoreBond() {
 
     fs.FileClose(&file_p);
     fs.FileDelete("/bond.dat");
+  }
+}
+
+void NimbleController::AcceptConnection(bool saveToFlash) {
+  bleController.PendingConnectionApproval(false);
+  if (saveToFlash) {
+    const auto& addr = bleController.PeerAddress();
+    if (!IsPeerTrusted(addr)) {
+      if (numTrustedPeers < MaxTrustedPeers) {
+        trustedPeers[numTrustedPeers++] = addr;
+      } else {
+        for (size_t i = 1; i < MaxTrustedPeers; ++i) {
+          trustedPeers[i - 1] = trustedPeers[i];
+        }
+        trustedPeers[MaxTrustedPeers - 1] = addr;
+      }
+      SaveTrustedPeers();
+    }
+  }
+  if (connectionHandle != BLE_HS_CONN_HANDLE_NONE) {
+    systemTask.PushMessage(Pinetime::System::Messages::BleConnected);
+  }
+}
+
+void NimbleController::RejectConnection() {
+  bleController.PendingConnectionApproval(false);
+  if (connectionHandle != BLE_HS_CONN_HANDLE_NONE) {
+    ble_gap_terminate(connectionHandle, BLE_ERR_REM_USER_CONN_TERM);
+  }
+}
+
+bool NimbleController::IsPeerTrusted(const Pinetime::Controllers::Ble::BleAddress& addr) const {
+  for (uint8_t i = 0; i < numTrustedPeers; ++i) {
+    if (trustedPeers[i] == addr) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void NimbleController::LoadTrustedPeers() {
+  numTrustedPeers = 0;
+  lfs_file_t file_p;
+  if (fs.FileOpen(&file_p, "/bt_trusted.dat", LFS_O_RDONLY) == 0) {
+    uint8_t count = 0;
+    if (fs.FileRead(&file_p, &count, 1) == 1) {
+      if (count > MaxTrustedPeers) {
+        count = MaxTrustedPeers;
+      }
+      for (uint8_t i = 0; i < count; ++i) {
+        if (fs.FileRead(&file_p, trustedPeers[i].data(), trustedPeers[i].size()) == static_cast<int>(trustedPeers[i].size())) {
+          numTrustedPeers++;
+        } else {
+          break;
+        }
+      }
+    }
+    fs.FileClose(&file_p);
+  }
+}
+
+void NimbleController::SaveTrustedPeers() {
+  lfs_file_t file_p;
+  if (fs.FileOpen(&file_p, "/bt_trusted.dat", LFS_O_WRONLY | LFS_O_CREAT) == 0) {
+    fs.FileWrite(&file_p, &numTrustedPeers, 1);
+    for (uint8_t i = 0; i < numTrustedPeers; ++i) {
+      fs.FileWrite(&file_p, trustedPeers[i].data(), trustedPeers[i].size());
+    }
+    fs.FileClose(&file_p);
   }
 }

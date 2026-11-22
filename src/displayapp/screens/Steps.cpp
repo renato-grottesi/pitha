@@ -66,7 +66,7 @@ Steps::Steps(Controllers::MotionController& motionController, Controllers::Setti
   lv_obj_set_auto_realign(tripLabel, true);
 
   Refresh();
-  taskRefresh = lv_task_create(RefreshTaskCallback, LV_DISP_DEF_REFR_PERIOD, LV_TASK_PRIO_MID, this);
+  taskRefresh = lv_task_create(RefreshTaskCallback, 250, LV_TASK_PRIO_MID, this);
 }
 
 Steps::~Steps() {

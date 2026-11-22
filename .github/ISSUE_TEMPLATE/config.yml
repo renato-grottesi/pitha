@@ -1,11 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Feature request
-    url: https://github.com/InfiniTimeOrg/InfiniTime/discussions/categories/ideas
-    about: Request a feature or share your ideas
+  - name: Upstream InfiniTime repository
+    url: https://github.com/InfiniTimeOrg/InfiniTime
+    about: Visit the upstream InfiniTime firmware project
   - name: PineTime community chat (Matrix)
     url: https://app.element.io/#/room/#pinetime:matrix.org
-    about: Please ask questions about PineTime here.
-  - name: PineTime developers chat (Matrix)
-    url: https://app.element.io/#/room/#pinetime-dev:matrix.org
-    about: Please ask questions about PineTime development here.
+    about: General questions about the PineTime hardware and ecosystem

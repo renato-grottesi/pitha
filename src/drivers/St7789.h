@@ -98,7 +98,12 @@ namespace Pinetime {
       static constexpr uint16_t Height = 320;
 
       uint8_t addrWindowArgs[4];
+      uint8_t colWindowArgs[4];
       uint8_t verticalScrollArgs[2];
+      uint16_t lastColStart = 0xFFFF;
+      uint16_t lastColEnd = 0xFFFF;
+      uint16_t lastRowStart = 0xFFFF;
+      uint16_t lastRowEnd = 0xFFFF;
     };
   }
 }

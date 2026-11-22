@@ -60,16 +60,16 @@ void HeartRateService::OnNewHeartRateValue(uint8_t heartRateValue) {
   if (!heartRateMeasurementNotificationEnable)
     return;
 
-  uint8_t buffer[2] = {0, heartRateValue}; // [0] = flags, [1] = hr value
-  auto* om = ble_hs_mbuf_from_flat(buffer, 2);
-
   uint16_t connectionHandle = nimble.connHandle();
-
-  if (connectionHandle == 0 || connectionHandle == BLE_HS_CONN_HANDLE_NONE) {
+  if (connectionHandle == BLE_HS_CONN_HANDLE_NONE) {
     return;
   }
 
-  ble_gattc_notify_custom(connectionHandle, heartRateMeasurementHandle, om);
+  uint8_t buffer[2] = {0, heartRateValue}; // [0] = flags, [1] = hr value
+  auto* om = ble_hs_mbuf_from_flat(buffer, 2);
+  if (om != nullptr) {
+    ble_gattc_notify_custom(connectionHandle, heartRateMeasurementHandle, om);
+  }
 }
 
 void HeartRateService::SubscribeNotification(uint16_t attributeHandle) {

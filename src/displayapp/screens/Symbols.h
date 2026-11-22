@@ -42,6 +42,17 @@ namespace Pinetime {
         static constexpr const char* sleep = "\xEE\xBD\x84";
         static constexpr const char* calculator = "\xEF\x87\xAC";
         static constexpr const char* backspace = "\xEF\x95\x9A";
+        static constexpr const char* pomodoro = "\xEF\xA0\x80";
+        static constexpr const char* gamepad = "\xEF\x84\x9B";
+        static constexpr const char* dumbbell = "\xEF\x91\x8B";
+        static constexpr const char* wrench = "\xEF\x82\xAD";
+        static constexpr const char* lightbulb = "\xEF\x83\xAB";
+        static constexpr const char* toggleOn = "\xEF\x88\x85";
+        static constexpr const char* thermometer = "\xEF\x8B\x89";
+        static constexpr const char* tempHigh = "\xEF\x9D\xA9";
+        static constexpr const char* fire = "\xEF\x81\xAD";
+        static constexpr const char* crosshairs = "\xEF\x81\x9B";
+        static constexpr const char* bricks = "\xEF\x80\x8A";
 
         // fontawesome_weathericons.c
         // static constexpr const char* sun = "\xEF\x86\x85";

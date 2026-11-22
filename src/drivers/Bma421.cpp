@@ -22,16 +22,6 @@ namespace {
   void user_delay(uint32_t period_us, void* /*intf_ptr*/) {
     nrf_delay_us(period_us);
   }
-
-  // Scale factors to convert accelerometer counts to milli-g
-  // from datasheet: https://files.pine64.org/doc/datasheet/pinetime/BST-BMA421-FL000.pdf
-  // The array index to use is stored in accel_conf.range
-  constexpr int16_t accelScaleFactors[] = {
-    [BMA4_ACCEL_RANGE_2G] = 1024, // LSB/g +/- 2g range
-    [BMA4_ACCEL_RANGE_4G] = 512,  // LSB/g +/- 4g range
-    [BMA4_ACCEL_RANGE_8G] = 256,  // LSB/g +/- 8g range
-    [BMA4_ACCEL_RANGE_16G] = 128  // LSB/g +/- 16g range
-  };
 }
 
 Bma421::Bma421(TwiMaster& twiMaster, uint8_t twiAddress) : twiMaster {twiMaster}, deviceAddress {twiAddress} {
@@ -117,17 +107,19 @@ Bma421::Values Bma421::Process() {
 
   // Scale the measured ADC counts to units of 'binary milli-g'
   // where 1g = 1024 'binary milli-g' units.
-  // See https://github.com/InfiniTimeOrg/InfiniTime/pull/1950 for
-  // discussion of why we opted for scaling to 1024 rather than 1000.
-  data.x = 1024 * rawData.x / accelScaleFactors[accel_conf.range];
-  data.y = 1024 * rawData.y / accelScaleFactors[accel_conf.range];
-  data.z = 1024 * rawData.z / accelScaleFactors[accel_conf.range];
+  // BMA4_ACCEL_RANGE_{2G,4G,8G,16G} = {0,1,2,3}, so scaling is an exact left shift.
+  const uint8_t shift = accel_conf.range & 0x03;
+  data.x = static_cast<int16_t>(static_cast<int32_t>(rawData.x) << shift);
+  data.y = static_cast<int16_t>(static_cast<int32_t>(rawData.y) << shift);
+  data.z = static_cast<int16_t>(static_cast<int32_t>(rawData.z) << shift);
 
-  uint32_t steps = 0;
-  bma423_step_counter_output(&steps, &bma);
+  if (stepReadDivider == 0) {
+    bma423_step_counter_output(&cachedSteps, &bma);
+  }
+  stepReadDivider = static_cast<uint8_t>((stepReadDivider + 1) % 10);
 
   // X and Y axis are swapped because of the way the sensor is mounted in the PineTime
-  return {steps, data.y, data.x, data.z};
+  return {cachedSteps, data.y, data.x, data.z};
 }
 
 bool Bma421::IsOk() const {
@@ -136,6 +128,8 @@ bool Bma421::IsOk() const {
 
 void Bma421::ResetStepCounter() {
   bma423_reset_step_counter(&bma);
+  cachedSteps = 0;
+  stepReadDivider = 0;
 }
 
 void Bma421::SoftReset() {

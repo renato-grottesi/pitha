@@ -1,0 +1,47 @@
+NOTICE — PITHA (PineTime InfiniTime Home Assistant)
+
+PITHA is a derivative fork of InfiniTime (https://github.com/InfiniTimeOrg/InfiniTime),
+originally created by JF002 and the InfiniTime contributors, and licensed under the
+GNU General Public License version 3 or any later version (GPL-3.0-or-later). See the
+LICENSE file in the root of this repository for the full license text.
+
+Upstream Origin:
+  - Project: InfiniTime (v1.16.0)
+  - Source:  https://github.com/InfiniTimeOrg/InfiniTime
+  - Authors: JF002 and InfiniTime contributors
+
+Fork Maintainer & Modifications:
+  - Repository: https://github.com/renato-grottesi/pitha
+  - Author:     Renato Grottesi (2026)
+  - Summary of prominent modifications in PITHA compared to InfiniTime 1.16.0:
+      * Custom BLE Home Assistant integration GATT service and watch UI screens
+        (Lights, Switches, Thermostat, Temperatures, Bluetooth restart), plus a
+        Home Assistant custom component (custom_components/pinetime)
+      * Additional watch faces (Legend, Lights, Polygons) and categorized app menus
+      * New apps and games: Cooking Timer (4 independent burners), Pomodoro,
+        Bubble Level, Breakout, and accelerometer-controlled AI Pong
+      * In-RAM state persistence for games (Twos/2048, Breakout, Pong, Dice) and
+        non-disruptive hourly/30-min chimes
+      * Bluetooth device allow-list filtering, 1-minute sleep return-to-watchface,
+        and rendering, BLE, DSP, and accelerometer optimizations
+
+Third-Party Components:
+  - FreeRTOS (MIT License)
+  - LVGL / LittleVGL (MIT License)
+  - Apache Mynewt NimBLE (Apache License 2.0)
+  - JetBrains Mono font (Apache License 2.0)
+  - Nordic nRF5 SDK components (Nordic 5-Clause / BSD-style licenses)
+
+--------------------------------------------------------------------------------
+PERSONAL WORK & NON-AFFILIATION DISCLAIMER
+--------------------------------------------------------------------------------
+This project is an independent personal project created and maintained by
+Renato Grottesi in his personal capacity and spare time. It is not an official
+product of, affiliated with, endorsed by, sponsored by, or otherwise associated
+with his employer or any other organization. All views, code, documentation,
+and opinions expressed in this repository are solely those of the author and do
+not represent the views or positions of his employer.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.

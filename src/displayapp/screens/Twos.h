@@ -29,7 +29,9 @@ namespace Pinetime {
         static constexpr int nRows = 4;
         static constexpr int nCells = nCols * nRows;
         TwosTile grid[nRows][nCols];
+        unsigned int displayedValues[nRows][nCols] {};
         unsigned int score = 0;
+        void resetGame();
         void updateGridDisplay();
         bool tryMerge(int newRow, int newCol, int oldRow, int oldCol);
         bool tryMove(int newRow, int newCol, int oldRow, int oldCol);

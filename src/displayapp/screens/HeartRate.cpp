@@ -75,24 +75,24 @@ HeartRate::~HeartRate() {
 }
 
 void HeartRate::Refresh() {
+  lastState = heartRateController.State();
+  lastHr = heartRateController.HeartRate();
 
-  auto state = heartRateController.State();
-  switch (state) {
-    case Controllers::HeartRateController::States::NoTouch:
-    case Controllers::HeartRateController::States::NotEnoughData:
-      // case Controllers::HeartRateController::States::Stopped:
+  if (lastState.IsUpdated() || lastHr.IsUpdated()) {
+    const auto state = lastState.Get();
+    const uint8_t hr = lastHr.Get();
+    if (state == Controllers::HeartRateController::States::NoTouch || state == Controllers::HeartRateController::States::NotEnoughData ||
+        hr == 0) {
       lv_label_set_text_static(label_hr, "---");
-      break;
-    default:
-      if (heartRateController.HeartRate() == 0) {
-        lv_label_set_text_static(label_hr, "---");
-      } else {
-        lv_label_set_text_fmt(label_hr, "%03d", heartRateController.HeartRate());
-      }
+    } else {
+      lv_label_set_text_fmt(label_hr, "%03d", hr);
+    }
   }
 
-  lv_label_set_text_static(label_status, ToString(state));
-  lv_obj_align(label_status, label_hr, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+  if (lastState.IsUpdated()) {
+    lv_label_set_text_static(label_status, ToString(lastState.Get()));
+    lv_obj_align(label_status, label_hr, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+  }
 }
 
 void HeartRate::OnStartStopEvent(lv_event_t event) {

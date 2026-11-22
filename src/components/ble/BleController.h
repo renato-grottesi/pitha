@@ -65,6 +65,22 @@ namespace Pinetime {
         return pairingKey;
       }
 
+      void PeerAddress(const BleAddress& addr) {
+        peerAddress = addr;
+      }
+
+      const BleAddress& PeerAddress() const {
+        return peerAddress;
+      }
+
+      void PendingConnectionApproval(bool pending) {
+        pendingConnectionApproval = pending;
+      }
+
+      bool IsPendingConnectionApproval() const {
+        return pendingConnectionApproval;
+      }
+
     private:
       bool isConnected = false;
       bool isRadioEnabled = true;
@@ -73,8 +89,10 @@ namespace Pinetime {
       uint32_t firmwareUpdateCurrentBytes = 0;
       FirmwareUpdateStates firmwareUpdateState = FirmwareUpdateStates::Idle;
       BleAddress address;
+      BleAddress peerAddress {};
       AddressTypes addressType;
       uint32_t pairingKey = 0;
+      bool pendingConnectionApproval = false;
     };
   }
 }

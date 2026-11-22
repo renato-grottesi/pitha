@@ -45,6 +45,8 @@ namespace Pinetime {
       bool isOk = false;
       bool isResetOk = false;
       DeviceTypes deviceType = DeviceTypes::Unknown;
+      uint32_t cachedSteps = 0;
+      uint8_t stepReadDivider = 0;
     };
   }
 }

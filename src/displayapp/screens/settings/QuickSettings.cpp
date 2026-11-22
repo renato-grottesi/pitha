@@ -115,7 +115,7 @@ QuickSettings::QuickSettings(Pinetime::Applications::DisplayApp* app,
   lv_label_set_text_static(lbl_btn, Symbols::settings);
 
   Refresh();
-  taskRefresh = lv_task_create(RefreshTaskCallback, LV_DISP_DEF_REFR_PERIOD, LV_TASK_PRIO_MID, this);
+  taskRefresh = lv_task_create(RefreshTaskCallback, 250, LV_TASK_PRIO_MID, this);
 }
 
 QuickSettings::~QuickSettings() {

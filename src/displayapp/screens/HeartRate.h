@@ -3,8 +3,10 @@
 #include <cstdint>
 #include <chrono>
 #include "displayapp/screens/Screen.h"
+#include "components/heartrate/HeartRateController.h"
 #include "systemtask/SystemTask.h"
 #include "systemtask/WakeLock.h"
+#include "utility/DirtyValue.h"
 #include "Symbols.h"
 #include <lvgl/src/lv_core/lv_style.h>
 #include <lvgl/src/lv_core/lv_obj.h>
@@ -35,6 +37,9 @@ namespace Pinetime {
         lv_obj_t* label_status;
         lv_obj_t* btn_startStop;
         lv_obj_t* label_startStop;
+
+        Utility::DirtyValue<Controllers::HeartRateController::States> lastState {};
+        Utility::DirtyValue<uint8_t> lastHr {};
 
         lv_task_t* taskRefresh;
       };

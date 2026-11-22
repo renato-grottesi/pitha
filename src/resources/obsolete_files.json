@@ -1,6 +1,34 @@
 [
   {
-    "path": "/example-of-obsolete-file.bin",
-    "since": "1.11.0"
+    "path": "/fonts/teko.bin",
+    "since": "1.16.0"
+  },
+  {
+    "path": "/fonts/bebas.bin",
+    "since": "1.16.0"
+  },
+  {
+    "path": "/fonts/lv_font_dots_40.bin",
+    "since": "1.16.0"
+  },
+  {
+    "path": "/fonts/7segments_40.bin",
+    "since": "1.16.0"
+  },
+  {
+    "path": "/fonts/7segments_115.bin",
+    "since": "1.16.0"
+  },
+  {
+    "path": "/fonts/rounded_large.bin",
+    "since": "1.16.0"
+  },
+  {
+    "path": "/fonts/rounded_small.bin",
+    "since": "1.16.0"
+  },
+  {
+    "path": "/images/pine_small.bin",
+    "since": "1.16.0"
   }
 ]

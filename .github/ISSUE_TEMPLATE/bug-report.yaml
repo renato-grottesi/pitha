@@ -41,8 +41,8 @@ body:
     attributes:
       label: Version
       description: |
-        What [version of the firmware](https://github.com/InfiniTimeOrg/InfiniTime/blob/main/doc/gettingStarted/updating-software.md#checking-the-version-of-infinitime) are you running?
-        If you are running an older version, please consider [updating to the latest firmware](https://github.com/InfiniTimeOrg/InfiniTime/blob/main/doc/gettingStarted/updating-software.md#updating-with-companion-apps).
+        What [version of the firmware](https://github.com/renato-grottesi/pitha/blob/main/doc/gettingStarted/updating-software.md#checking-the-version-of-infinitime) are you running?
+        If you are running an older version, please consider [updating to the latest firmware](https://github.com/renato-grottesi/pitha/releases).
         If you are running directly from git, specify the branch or the commit hash directly.
       placeholder: "Ex. v1.11.0 or main or fc922b60"
     validations:

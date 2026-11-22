@@ -1,51 +1,78 @@
 #pragma once
 
-#include <lvgl/lvgl.h>
 #include <cstdint>
+#include <lvgl/lvgl.h>
 #include "displayapp/screens/Screen.h"
 #include "displayapp/apps/Apps.h"
 #include "displayapp/Controllers.h"
-#include "Symbols.h"
+#include "displayapp/screens/Symbols.h"
+#include "components/motion/MotionController.h"
+#include "components/motor/MotorController.h"
+#include "systemtask/SystemTask.h"
+#include "systemtask/WakeLock.h"
 
 namespace Pinetime {
-  namespace Components {
-    class LittleVgl;
-  }
-
   namespace Applications {
     namespace Screens {
 
       class Paddle : public Screen {
       public:
-        Paddle(Pinetime::Components::LittleVgl& lvgl);
+        Paddle(Controllers::MotionController& motionController,
+               Controllers::MotorController& motorController,
+               System::SystemTask& systemTask);
         ~Paddle() override;
 
         void Refresh() override;
-
         bool OnTouchEvent(TouchEvents event) override;
-        bool OnTouchEvent(uint16_t x, uint16_t y) override;
+        void DrawPlayfield(lv_obj_t* obj, const lv_area_t* clipArea);
 
       private:
-        Pinetime::Components::LittleVgl& lvgl;
+        uint32_t NextRand();
+        void CalibrateNeutralY();
+        void RollAiAimOffset();
+        void ResetServe(bool towardAi);
+        void ResetMatch();
+        void UpdatePlayerFromAccel();
+        void UpdateAiPaddle();
+        void StepBall();
+        void InvalidateRect(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
+        void UpdateScores();
+        void UpdatePauseOverlay();
 
-        const uint8_t ballSize = 16;
+        Controllers::MotionController& motionController;
+        Controllers::MotorController& motorController;
+        System::WakeLock wakeLock;
 
-        uint16_t paddlePos = 30; // Paddle center
+        uint32_t rngState = 1;
+        int32_t neutralY = 0;
 
-        int16_t ballX = (LV_HOR_RES - ballSize) / 2;
-        int16_t ballY = (LV_VER_RES - ballSize) / 2;
+        int32_t playerYQ4 = 0;
+        int32_t aiYQ4 = 0;
+        int32_t aiAimOffsetQ4 = 0;
 
-        int8_t dx = 2; // Velocity of the ball in the x_coordinate
-        int8_t dy = 3; // Velocity of the ball in the y_coordinate
+        int32_t ballXQ4 = 0;
+        int32_t ballYQ4 = 0;
+        int32_t ballVxQ4 = 26;
+        int32_t ballVyQ4 = 10;
 
-        uint16_t score = 0;
+        int16_t prevPlayerY = 0;
+        int16_t prevAiY = 0;
+        int16_t prevBallX = 0;
+        int16_t prevBallY = 0;
 
-        lv_obj_t* points;
-        lv_obj_t* paddle;
-        lv_obj_t* ball;
-        lv_obj_t* background;
+        uint8_t playerScore = 0;
+        uint8_t aiScore = 0;
+        uint8_t rallyHits = 0;
+        uint8_t serveDelayTicks = 0;
+        bool paused = false;
+        bool scoreDirty = true;
 
-        lv_task_t* taskRefresh;
+        lv_obj_t* playfieldObj = nullptr;
+        lv_obj_t* playerScoreLabel = nullptr;
+        lv_obj_t* aiScoreLabel = nullptr;
+        lv_obj_t* pauseBox = nullptr;
+        lv_obj_t* pauseLabel = nullptr;
+        lv_task_t* taskRefresh = nullptr;
       };
     }
 
@@ -55,7 +82,7 @@ namespace Pinetime {
       static constexpr const char* icon = Screens::Symbols::paddle;
 
       static Screens::Screen* Create(AppControllers& controllers) {
-        return new Screens::Paddle(controllers.lvgl);
+        return new Screens::Paddle(controllers.motionController, controllers.motorController, *controllers.systemTask);
       };
 
       static bool IsAvailable(Pinetime::Controllers::FS& /*filesystem*/) {

@@ -82,7 +82,7 @@ Tile::Tile(uint8_t screenID,
   lv_obj_set_event_cb(btnm1, event_handler);
 
   Refresh();
-  taskRefresh = lv_task_create(RefreshTaskCallback, LV_DISP_DEF_REFR_PERIOD, LV_TASK_PRIO_MID, this);
+  taskRefresh = lv_task_create(RefreshTaskCallback, 250, LV_TASK_PRIO_MID, this);
 }
 
 Tile::~Tile() {

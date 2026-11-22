@@ -40,7 +40,7 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          git config --global --add safe.directory /__w/InfiniTime/InfiniTime
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           /opt/build.sh all
       - name: Output build size
         id: output-sizes
@@ -59,24 +59,24 @@ jobs:
       - name: Upload DFU artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: InfiniTime DFU ${{ env.REF_NAME }}
+          name: PITHA DFU ${{ env.REF_NAME }}
           path: ./build/output/pinetime-mcuboot-app-dfu/*
       - name: Upload MCUBoot image artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: InfiniTime MCUBoot image ${{ env.REF_NAME }}
+          name: PITHA MCUBoot image ${{ env.REF_NAME }}
           path: ./build/output/pinetime-mcuboot-app-image-*.bin
       - name: Upload standalone ELF artifacts
         uses: actions/upload-artifact@v4
         id: upload-firmware
         with:
-          name: InfiniTime image ${{ env.REF_NAME }}
+          name: PITHA image ${{ env.REF_NAME }}
           path: ./build/output/src/pinetime-app-*.out
       - name: Upload resources artifacts
         uses: actions/upload-artifact@v4
         id: upload-resources
         with:
-          name: InfiniTime resources ${{ env.REF_NAME }}
+          name: PITHA resources ${{ env.REF_NAME }}
           path: ./build/output/infinitime-resources-*.zip
 
   build-simulator:
@@ -143,8 +143,8 @@ jobs:
     - name: Get base branch SHA
       id: get-base-sha
       run: |
-        # Fix for "detected dubious ownership in repository at '/__w/InfiniTime/InfiniTime'"
-        git config --global --add safe.directory /__w/InfiniTime/InfiniTime
+        # Fix for "detected dubious ownership in repository".
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
         echo base_sha=$(git rev-parse HEAD) >> $GITHUB_OUTPUT
 
     - name: Cache build

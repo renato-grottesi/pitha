@@ -17,6 +17,8 @@
 #include "main.h"
 #include "BootErrors.h"
 
+#include <cstdio>
+#include <cstring>
 #include <memory>
 
 using namespace Pinetime::System;
@@ -143,6 +145,7 @@ void SystemTask::Work() {
   displayApp.Register(&nimbleController.weather());
   displayApp.Register(&nimbleController.music());
   displayApp.Register(&nimbleController.navigation());
+  displayApp.Register(&nimbleController.homeAssistant());
   displayApp.Start(bootError);
 
   heartRateSensor.Init();

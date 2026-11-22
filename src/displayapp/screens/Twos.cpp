@@ -1,9 +1,19 @@
 #include "displayapp/screens/Twos.h"
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <lvgl/lvgl.h>
 
 using namespace Pinetime::Applications::Screens;
+
+namespace {
+  struct SavedTwosState {
+    bool valid = false;
+    uint32_t score = 0;
+    uint16_t values[16] {};
+  };
+  SavedTwosState savedState {};
+}
 
 Twos::Twos() {
 
@@ -42,6 +52,7 @@ Twos::Twos() {
     lv_table_set_col_width(gridDisplay, col, colWidth);
     for (int row = 0; row < nRows; row++) {
       grid[row][col].value = 0;
+      displayedValues[row][col] = 0;
       lv_table_set_cell_type(gridDisplay, row, col, 1);
       lv_table_set_cell_align(gridDisplay, row, col, LV_LABEL_ALIGN_CENTER);
     }
@@ -51,23 +62,53 @@ Twos::Twos() {
 
   lv_obj_clean_style_list(gridDisplay, LV_TABLE_PART_BG);
 
-  placeNewTile();
-  placeNewTile();
-
-  // format score text
+  // format score text before restoring or initializing board
   scoreText = lv_label_create(lv_scr_act(), nullptr);
   lv_obj_set_width(scoreText, LV_HOR_RES);
   lv_label_set_align(scoreText, LV_ALIGN_IN_LEFT_MID);
   lv_obj_align(scoreText, nullptr, LV_ALIGN_IN_TOP_LEFT, 0, 0);
   lv_label_set_recolor(scoreText, true);
-  lv_label_set_text_fmt(scoreText, "Score #FFFF00 %i#", score);
+
+  if (savedState.valid) {
+    score = savedState.score;
+    for (int row = 0; row < nRows; row++) {
+      for (int col = 0; col < nCols; col++) {
+        grid[row][col].value = savedState.values[row * nCols + col];
+        grid[row][col].merged = false;
+      }
+    }
+    updateGridDisplay();
+    lv_label_set_text_fmt(scoreText, "Score #FFFF00 %u#", score);
+  } else {
+    resetGame();
+  }
 }
 
 Twos::~Twos() {
-  for (lv_style_t cellStyle : cellStyles) {
-    lv_style_reset(&cellStyle);
+  savedState.valid = true;
+  savedState.score = score;
+  for (int row = 0; row < nRows; row++) {
+    for (int col = 0; col < nCols; col++) {
+      savedState.values[row * nCols + col] = static_cast<uint16_t>(grid[row][col].value);
+    }
   }
   lv_obj_clean(lv_scr_act());
+  for (lv_style_t& cellStyle : cellStyles) {
+    lv_style_reset(&cellStyle);
+  }
+}
+
+void Twos::resetGame() {
+  for (int row = 0; row < nRows; row++) {
+    for (int col = 0; col < nCols; col++) {
+      grid[row][col].value = 0;
+      grid[row][col].merged = false;
+    }
+  }
+  score = 0;
+  lv_label_set_text_fmt(scoreText, "Score #FFFF00 %u#", score);
+  placeNewTile();
+  placeNewTile();
 }
 
 bool Twos::placeNewTile() {
@@ -103,7 +144,7 @@ bool Twos::tryMerge(int newRow, int newCol, int oldRow, int oldCol) {
       if (!grid[newRow][newCol].merged) {
         grid[newRow][newCol].value *= 2;
         score += grid[newRow][newCol].value;
-        lv_label_set_text_fmt(scoreText, "Score #FFFF00 %i#", score);
+        lv_label_set_text_fmt(scoreText, "Score #FFFF00 %u#", score);
         grid[oldRow][oldCol].value = 0;
         grid[newRow][newCol].merged = true;
         return true;
@@ -230,6 +271,9 @@ bool Twos::OnTouchEvent(Pinetime::Applications::TouchEvents event) {
         placeNewTile();
       }
       return true;
+    case TouchEvents::LongTap:
+      resetGame();
+      return true;
     default:
       return false;
   }
@@ -240,14 +284,20 @@ void Twos::updateGridDisplay() {
   for (unsigned int i = 0; i < nCells; i++) {
     const unsigned int row = i / nCols;
     const unsigned int col = i % nCols;
-    if (grid[row][col].value > 0) {
+    const unsigned int val = grid[row][col].value;
+    if (val == displayedValues[row][col]) {
+      continue;
+    }
+    displayedValues[row][col] = val;
+
+    if (val > 0) {
       char buffer[7];
-      snprintf(buffer, sizeof(buffer), "%u", grid[row][col].value);
+      snprintf(buffer, sizeof(buffer), "%u", val);
       lv_table_set_cell_value(gridDisplay, row, col, buffer);
     } else {
       lv_table_set_cell_value(gridDisplay, row, col, "");
     }
-    switch (grid[row][col].value) {
+    switch (val) {
       case 0:
         lv_table_set_cell_type(gridDisplay, row, col, 1);
         break;

@@ -40,6 +40,12 @@ namespace Pinetime {
           return false;
         }
 
+        virtual void OnDisplaySleep() {
+        }
+
+        virtual void OnDisplayWake() {
+        }
+
       protected:
         bool running = true;
       };

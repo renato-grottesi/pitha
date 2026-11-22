@@ -10,6 +10,7 @@
 #include "components/ble/AlertNotificationClient.h"
 #include "components/ble/AlertNotificationService.h"
 #include "components/ble/BatteryInformationService.h"
+#include "components/ble/BleController.h"
 #include "components/ble/CurrentTimeClient.h"
 #include "components/ble/CurrentTimeService.h"
 #include "components/ble/DeviceInformationService.h"
@@ -22,6 +23,7 @@
 #include "components/ble/ServiceDiscovery.h"
 #include "components/ble/MotionService.h"
 #include "components/ble/SimpleWeatherService.h"
+#include "components/ble/HomeAssistantService.h"
 #include "components/fs/FS.h"
 
 namespace Pinetime {
@@ -71,6 +73,10 @@ namespace Pinetime {
         return weatherService;
       };
 
+      Pinetime::Controllers::HomeAssistantService& homeAssistant() {
+        return haService;
+      };
+
       uint16_t connHandle();
       void NotifyBatteryLevel(uint8_t level);
 
@@ -80,10 +86,21 @@ namespace Pinetime {
 
       void EnableRadio();
       void DisableRadio();
+      void RestartBluetooth();
+
+      void AcceptConnection(bool saveToFlash);
+      void RejectConnection();
 
     private:
       void PersistBond(struct ble_gap_conn_desc& desc);
       void RestoreBond();
+      bool IsPeerTrusted(const Pinetime::Controllers::Ble::BleAddress& addr) const;
+      void LoadTrustedPeers();
+      void SaveTrustedPeers();
+
+      static constexpr size_t MaxTrustedPeers = 8;
+      std::array<Pinetime::Controllers::Ble::BleAddress, MaxTrustedPeers> trustedPeers {};
+      uint8_t numTrustedPeers = 0;
 
       static constexpr const char* deviceName = "InfiniTime";
       Pinetime::System::SystemTask& systemTask;
@@ -106,6 +123,7 @@ namespace Pinetime {
       HeartRateService heartRateService;
       MotionService motionService;
       FSService fsService;
+      HomeAssistantService haService;
       ServiceDiscovery serviceDiscovery;
 
       uint8_t addrType;

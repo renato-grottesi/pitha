@@ -1,0 +1,67 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect PineTime Smartwatch",
+        "description": "Select your PineTime smartwatch or enter its Bluetooth MAC address (e.g. AA:BB:CC:DD:EE:FF).",
+        "data": {
+          "address": "Bluetooth MAC Address"
+        }
+      },
+      "bluetooth_confirm": {
+        "description": "Do you want to set up {name}?"
+      }
+    },
+    "abort": {
+      "already_configured": "This PineTime watch is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure PineTime Names & Linked Entities",
+        "description": "Set custom names (up to 8 characters) for all Lights, Switches, and Temperature rows, and optionally link each slot to an existing Home Assistant entity.",
+        "data": {
+          "light_0_name": "Light 1 Name (max 8 chars)",
+          "light_0": "Light 1 Entity",
+          "light_1_name": "Light 2 Name (max 8 chars)",
+          "light_1": "Light 2 Entity",
+          "light_2_name": "Light 3 Name (max 8 chars)",
+          "light_2": "Light 3 Entity",
+          "light_3_name": "Light 4 Name (max 8 chars)",
+          "light_3": "Light 4 Entity",
+          "light_4_name": "Light 5 Name (max 8 chars)",
+          "light_4": "Light 5 Entity",
+          "light_5_name": "Light 6 Name (max 8 chars)",
+          "light_5": "Light 6 Entity",
+          "switch_0_name": "Switch 1 Name (max 8 chars)",
+          "switch_0": "Switch 1 Entity",
+          "switch_1_name": "Switch 2 Name (max 8 chars)",
+          "switch_1": "Switch 2 Entity",
+          "switch_2_name": "Switch 3 Name (max 8 chars)",
+          "switch_2": "Switch 3 Entity",
+          "switch_3_name": "Switch 4 Name (max 8 chars)",
+          "switch_3": "Switch 4 Entity",
+          "switch_4_name": "Switch 5 Name (max 8 chars)",
+          "switch_4": "Switch 5 Entity",
+          "switch_5_name": "Switch 6 Name (max 8 chars)",
+          "switch_5": "Switch 6 Entity",
+          "climate_entity": "Thermostat Climate Entity",
+          "thermostat_temp_sensor": "Thermostat Current Temperature Sensor (optional)",
+          "temp_0_name": "Temp Slot 1 Name (max 8 chars)",
+          "temp_0_sensor": "Temp Slot 1 Sensor",
+          "temp_1_name": "Temp Slot 2 Name (max 8 chars)",
+          "temp_1_sensor": "Temp Slot 2 Sensor",
+          "temp_2_name": "Temp Slot 3 Name (max 8 chars)",
+          "temp_2_sensor": "Temp Slot 3 Sensor",
+          "temp_3_name": "Temp Slot 4 Name (max 8 chars)",
+          "temp_3_sensor": "Temp Slot 4 Sensor",
+          "temp_4_name": "Temp Slot 5 Name (max 8 chars)",
+          "temp_4_sensor": "Temp Slot 5 Sensor",
+          "temp_5_name": "Temp Slot 6 Name (max 8 chars)",
+          "temp_5_sensor": "Temp Slot 6 Sensor"
+        }
+      }
+    }
+  }
+}

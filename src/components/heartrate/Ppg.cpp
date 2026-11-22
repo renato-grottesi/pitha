@@ -1,57 +1,59 @@
 #include "components/heartrate/Ppg.h"
+#include <algorithm>
 #include <nrf_log.h>
 #include <vector>
 
 using namespace Pinetime::Controllers;
 
 namespace {
-  float LinearInterpolation(const float* xValues, const float* yValues, int length, float pointX) {
-    if (pointX > xValues[length - 1]) {
-      return yValues[length - 1];
-    } else if (pointX <= xValues[0]) {
-      return yValues[0];
+  float PeakSearch(const float* yVals, float threshold, float& width, int startIdx, int endIdx, int length) {
+    startIdx = std::max(0, startIdx);
+    endIdx = std::min(length - 1, endIdx);
+    width = 0.0f;
+    if (startIdx >= endIdx) {
+      return 0.0f;
     }
-    int index = 0;
-    while (pointX > xValues[index] && index < length - 1) {
-      index++;
-    }
-    float pointX0 = xValues[index - 1];
-    float pointX1 = xValues[index];
-    float pointY0 = yValues[index - 1];
-    float pointY1 = yValues[index];
-    float mu = (pointX - pointX0) / (pointX1 - pointX0);
 
-    return (pointY0 * (1 - mu) + pointY1 * mu);
-  }
-
-  float PeakSearch(float* xVals, float* yVals, float threshold, float& width, float start, float end, int length) {
     int peaks = 0;
-    bool enabled = false;
+    bool enabled = (yVals[startIdx] < threshold);
+    bool inPeak = false;
     float minBin = 0.0f;
-    float maxBin = 0.0f;
     float peakCenter = 0.0f;
-    float prevValue = LinearInterpolation(xVals, yVals, length, start - 0.01f);
-    float currValue = LinearInterpolation(xVals, yVals, length, start);
-    float idx = start;
-    while (idx < end) {
-      float nextValue = LinearInterpolation(xVals, yVals, length, idx + 0.01f);
-      if (currValue < threshold) {
-        enabled = true;
-      }
-      if (currValue >= threshold and enabled) {
-        if (prevValue < threshold) {
-          minBin = idx;
-        } else if (nextValue <= threshold) {
-          maxBin = idx;
-          peaks++;
-          width = maxBin - minBin;
-          peakCenter = width / 2.0f + minBin;
+
+    for (int i = startIdx; i < endIdx; ++i) {
+      const float y0 = yVals[i];
+      const float y1 = yVals[i + 1];
+
+      if (!enabled) {
+        if (y0 < threshold) {
+          enabled = true;
+        } else if (y1 < threshold) {
+          enabled = true;
+          continue;
         }
       }
-      prevValue = currValue;
-      currValue = nextValue;
-      idx += 0.01f;
+
+      if (enabled) {
+        if (!inPeak) {
+          if (y0 < threshold && y1 > threshold) {
+            minBin = static_cast<float>(i) + (threshold - y0) / (y1 - y0);
+            inPeak = true;
+          } else if (y0 >= threshold && y1 > threshold) {
+            minBin = static_cast<float>(i);
+            inPeak = true;
+          }
+        }
+
+        if (inPeak && y1 <= threshold) {
+          const float maxBin = (y0 > threshold) ? (static_cast<float>(i) + (y0 - threshold) / (y0 - y1)) : static_cast<float>(i);
+          peaks++;
+          width = maxBin - minBin;
+          peakCenter = minBin + width * 0.5f;
+          inPeak = false;
+        }
+      }
     }
+
     if (peaks != 1) {
       width = 0.0f;
       peakCenter = 0.0f;
@@ -218,17 +220,7 @@ int Ppg::ProcessHeartRate(bool init) {
   float signalToNoiseRatio = SignalToNoise(spectrum, hrROIbegin, hrROIend, max);
   if (signalToNoiseRatio > signalToNoiseThreshold && spectrum.at(0) < dcThreshold) {
     threshold *= max;
-    // Reuse VImag for interpolation x values passed to PeakSearch
-    for (int idx = 0; idx < dataLength; idx++) {
-      vImag[idx] = idx;
-    }
-    peakLocation = PeakSearch(vImag.data(),
-                              spectrum.data(),
-                              threshold,
-                              peakWidth,
-                              static_cast<float>(hrROIbegin),
-                              static_cast<float>(hrROIend),
-                              specLen);
+    peakLocation = PeakSearch(spectrum.data(), threshold, peakWidth, hrROIbegin, hrROIend, specLen);
     peakLocation *= freqResolution;
   }
   // Peak too wide? (broad spectrum noise or large, rapid HR change)

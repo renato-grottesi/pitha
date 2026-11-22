@@ -31,6 +31,8 @@
 #include "displayapp/screens/PassKey.h"
 #include "displayapp/screens/Error.h"
 #include "displayapp/screens/Calculator.h"
+#include "displayapp/screens/Pomodoro.h"
+#include "displayapp/screens/CookingTimer.h"
 
 #include "drivers/Cst816s.h"
 #include "drivers/St7789.h"
@@ -73,6 +75,16 @@ namespace {
     auto* dispApp = static_cast<DisplayApp*>(pvTimerGetTimerID(xTimer));
     dispApp->PushMessage(Display::Messages::TimerDone);
   }
+
+  void PomodoroTimerCallback(TimerHandle_t xTimer) {
+    auto* dispApp = static_cast<DisplayApp*>(pvTimerGetTimerID(xTimer));
+    dispApp->PushMessage(Display::Messages::PomodoroTimerDone);
+  }
+
+  void CookingTimerCallback(TimerHandle_t xTimer) {
+    auto* dispApp = static_cast<DisplayApp*>(pvTimerGetTimerID(xTimer));
+    dispApp->PushMessage(Display::Messages::CookingTimerDone);
+  }
 }
 
 DisplayApp::DisplayApp(Drivers::St7789& lcd,
@@ -111,6 +123,8 @@ DisplayApp::DisplayApp(Drivers::St7789& lcd,
     spiNorFlash {spiNorFlash},
     lvgl {lcd, filesystem},
     timer(this, TimerCallback),
+    pomodoroController(this, PomodoroTimerCallback),
+    cookingTimerController(this, CookingTimerCallback),
     controllers {batteryController,
                  bleController,
                  dateTimeController,
@@ -125,9 +139,12 @@ DisplayApp::DisplayApp(Drivers::St7789& lcd,
                  nullptr,
                  filesystem,
                  timer,
+                 pomodoroController,
+                 cookingTimerController,
                  nullptr,
                  this,
                  lvgl,
+                 nullptr,
                  nullptr,
                  nullptr} {
 }
@@ -239,7 +256,15 @@ void DisplayApp::Refresh() {
       queueTimeout = portMAX_DELAY;
       break;
     case States::AOD:
-      if (!currentScreen->IsRunning()) {
+      if (canReturnToClockOnWake && (xTaskGetTickCount() - sleepEntryTick) >= pdMS_TO_TICKS(60000)) {
+        canReturnToClockOnWake = false;
+        LoadScreen(Apps::Clock, DisplayApp::FullRefreshDirections::None);
+        appStackDirections.Reset();
+        returnAppStack.Reset();
+        if (currentScreen) {
+          currentScreen->OnDisplaySleep();
+        }
+      } else if (!currentScreen->IsRunning()) {
         LoadPreviousScreen();
       }
       // Check we've slept long enough
@@ -320,19 +345,28 @@ void DisplayApp::Refresh() {
           brightnessController.Set(Controllers::BrightnessController::Levels::Off);
         }
         // Since the active screen is not really an app, go back to Clock.
-        if (currentApp == Apps::Launcher || currentApp == Apps::Notifications || currentApp == Apps::NotificationsPreview ||
+        if (currentApp == Apps::Launcher || currentApp == Apps::TimeMenu || currentApp == Apps::GamesMenu ||
+            currentApp == Apps::ExerciseMenu || currentApp == Apps::UtilitiesMenu || currentApp == Apps::HomeAssistantMenu ||
+            currentApp == Apps::Notifications || currentApp == Apps::NotificationsPreview ||
             currentApp == Apps::QuickSettings || currentApp == Apps::Settings) {
           LoadScreen(Apps::Clock, DisplayApp::FullRefreshDirections::None);
           appStackDirections.Reset();
           returnAppStack.Reset();
-          // Wait for the clock app to load before moving on.
-          while (!lv_task_handler()) {
-          };
+          // Wait for the clock app to load before moving on (bounded to prevent deadlock on animated watchfaces).
+          for (int i = 0; i < 4 && !lv_task_handler(); ++i) {
+          }
+        }
+        if (currentScreen) {
+          currentScreen->OnDisplaySleep();
+          lv_refr_now(nullptr);
         }
         // Clear any ongoing touch pressed events
         // Without this LVGL gets stuck in the pressed state and will keep refreshing the
         // display activity timer causing the screen to never sleep after timeout
         lvgl.ClearTouchState();
+        sleepEntryTick = xTaskGetTickCount();
+        canReturnToClockOnWake = (currentApp != Apps::Clock && currentApp != Apps::FirmwareUpdate &&
+                                  currentApp != Apps::Error && currentApp != Apps::PassKey);
         if (msg == Messages::GoToAOD) {
           lcd.LowPowerOn();
           // Record idle entry time
@@ -361,7 +395,19 @@ void DisplayApp::Refresh() {
         } else {
           lcd.Wakeup();
         }
+        if (canReturnToClockOnWake && (xTaskGetTickCount() - sleepEntryTick) >= pdMS_TO_TICKS(60000)) {
+          LoadScreen(Apps::Clock, DisplayApp::FullRefreshDirections::None);
+          appStackDirections.Reset();
+          returnAppStack.Reset();
+          for (int i = 0; i < 4 && !lv_task_handler(); ++i) {
+          }
+          lv_refr_now(nullptr);
+        }
+        canReturnToClockOnWake = false;
         lv_disp_trig_activity(nullptr);
+        if (currentScreen) {
+          currentScreen->OnDisplayWake();
+        }
         ApplyBrightness();
         state = States::Running;
         break;
@@ -369,9 +415,11 @@ void DisplayApp::Refresh() {
         // Only used for recovery firmware
         break;
       case Messages::NewNotification:
+        canReturnToClockOnWake = false;
         LoadNewScreen(Apps::NotificationsPreview, DisplayApp::FullRefreshDirections::Down);
         break;
       case Messages::TimerDone: {
+        canReturnToClockOnWake = false;
         if (state != States::Running) {
           PushMessageToSystemTask(System::Messages::GoToRunning);
         }
@@ -386,7 +434,39 @@ void DisplayApp::Refresh() {
         }
         break;
       }
+      case Messages::PomodoroTimerDone: {
+        canReturnToClockOnWake = false;
+        pomodoroController.OnTimerDone();
+        if (state != States::Running) {
+          PushMessageToSystemTask(System::Messages::GoToRunning);
+        }
+        lv_disp_trig_activity(nullptr);
+        if (currentApp != Apps::Pomodoro) {
+          LoadNewScreen(Apps::Pomodoro, DisplayApp::FullRefreshDirections::Up);
+        } else {
+          auto* pomodoroScreen = static_cast<Screens::Pomodoro*>(currentScreen.get());
+          pomodoroScreen->OnPhaseAlert();
+        }
+        break;
+      }
+      case Messages::CookingTimerDone: {
+        if (cookingTimerController.OnTimerDone()) {
+          canReturnToClockOnWake = false;
+          if (state != States::Running) {
+            PushMessageToSystemTask(System::Messages::GoToRunning);
+          }
+          lv_disp_trig_activity(nullptr);
+          if (currentApp != Apps::CookingTimer) {
+            LoadNewScreen(Apps::CookingTimer, DisplayApp::FullRefreshDirections::Up);
+          } else {
+            auto* cookingScreen = static_cast<Screens::CookingTimer*>(currentScreen.get());
+            cookingScreen->OnPlateAlert();
+          }
+        }
+        break;
+      }
       case Messages::AlarmTriggered:
+        canReturnToClockOnWake = false;
         if (currentApp == Apps::Alarm) {
           auto* alarm = static_cast<Screens::Alarm*>(currentScreen.get());
           alarm->SetAlerting();
@@ -395,6 +475,7 @@ void DisplayApp::Refresh() {
         }
         break;
       case Messages::ShowPairingKey:
+        canReturnToClockOnWake = false;
         LoadNewScreen(Apps::PassKey, DisplayApp::FullRefreshDirections::Up);
         motorController.RunForDuration(35);
         break;
@@ -472,19 +553,19 @@ void DisplayApp::Refresh() {
         LoadNewScreen(Apps::SysInfo, DisplayApp::FullRefreshDirections::Up);
         break;
       case Messages::ButtonDoubleClicked:
-        if (currentApp != Apps::Notifications && currentApp != Apps::NotificationsPreview) {
-          LoadNewScreen(Apps::Notifications, DisplayApp::FullRefreshDirections::Down);
+        if (currentApp != Apps::HomeAssistantMenu) {
+          LoadNewScreen(Apps::HomeAssistantMenu, DisplayApp::FullRefreshDirections::Up);
         }
         break;
 
       case Messages::BleFirmwareUpdateStarted:
+        canReturnToClockOnWake = false;
         LoadNewScreen(Apps::FirmwareUpdate, DisplayApp::FullRefreshDirections::Down);
         break;
       case Messages::BleRadioEnableToggle:
         PushMessageToSystemTask(System::Messages::BleRadioEnableToggle);
         break;
       case Messages::Chime:
-        LoadNewScreen(Apps::Clock, DisplayApp::FullRefreshDirections::None);
         motorController.RunForDuration(35);
         break;
     }
@@ -530,14 +611,14 @@ void DisplayApp::LoadScreen(Apps app, DisplayApp::FullRefreshDirections directio
       std::ranges::transform(userApps, apps.begin(), [this](const auto& userApp) {
         return Screens::Tile::Applications {userApp.icon, userApp.app, userApp.isAvailable(controllers.filesystem)};
       });
-      currentScreen = std::make_unique<Screens::ApplicationList>(this,
-                                                                 settingsController,
-                                                                 batteryController,
-                                                                 bleController,
-                                                                 alarmController,
-                                                                 dateTimeController,
-                                                                 filesystem,
-                                                                 std::move(apps));
+      currentScreen = std::make_unique<Screens::ApplicationList<UserAppTypes::Count>>(this,
+                                                                                      settingsController,
+                                                                                      batteryController,
+                                                                                      bleController,
+                                                                                      alarmController,
+                                                                                      dateTimeController,
+                                                                                      filesystem,
+                                                                                      std::move(apps));
     } break;
     case Apps::Clock: {
       const auto* watchFace = std::ranges::find_if(userWatchFaces, [this](const WatchFaceDescription& watchfaceDescription) {
@@ -562,7 +643,7 @@ void DisplayApp::LoadScreen(Apps app, DisplayApp::FullRefreshDirections directio
       break;
 
     case Apps::PassKey:
-      currentScreen = std::make_unique<Screens::PassKey>(bleController.GetPairingKey());
+      currentScreen = std::make_unique<Screens::PassKey>(bleController, systemTask->nimble());
       break;
 
     case Apps::Notifications:
@@ -659,9 +740,44 @@ void DisplayApp::LoadScreen(Apps app, DisplayApp::FullRefreshDirections directio
       });
       if (d != userApps.end()) {
         currentScreen.reset(d->create(controllers));
-      } else {
-        currentScreen.reset(userWatchFaces[0].create(controllers));
+        break;
       }
+      const auto* td = std::ranges::find_if(timeApps, [app](const AppDescription& appDescription) {
+        return appDescription.app == app;
+      });
+      if (td != timeApps.end()) {
+        currentScreen.reset(td->create(controllers));
+        break;
+      }
+      const auto* gd = std::ranges::find_if(gameApps, [app](const AppDescription& appDescription) {
+        return appDescription.app == app;
+      });
+      if (gd != gameApps.end()) {
+        currentScreen.reset(gd->create(controllers));
+        break;
+      }
+      const auto* ed = std::ranges::find_if(exerciseApps, [app](const AppDescription& appDescription) {
+        return appDescription.app == app;
+      });
+      if (ed != exerciseApps.end()) {
+        currentScreen.reset(ed->create(controllers));
+        break;
+      }
+      const auto* ud = std::ranges::find_if(utilitiesApps, [app](const AppDescription& appDescription) {
+        return appDescription.app == app;
+      });
+      if (ud != utilitiesApps.end()) {
+        currentScreen.reset(ud->create(controllers));
+        break;
+      }
+      const auto* hd = std::ranges::find_if(haApps, [app](const AppDescription& appDescription) {
+        return appDescription.app == app;
+      });
+      if (hd != haApps.end()) {
+        currentScreen.reset(hd->create(controllers));
+        break;
+      }
+      currentScreen.reset(userWatchFaces[0].create(controllers));
       break;
     }
   }
@@ -732,6 +848,10 @@ void DisplayApp::Register(Pinetime::Controllers::MusicService* musicService) {
 
 void DisplayApp::Register(Pinetime::Controllers::NavigationService* NavigationService) {
   this->controllers.navigationService = NavigationService;
+}
+
+void DisplayApp::Register(Pinetime::Controllers::HomeAssistantService* haService) {
+  this->controllers.haService = haService;
 }
 
 void DisplayApp::ApplyBrightness() {

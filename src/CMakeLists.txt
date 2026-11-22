@@ -381,6 +381,14 @@ list(APPEND SOURCE_FILES
         displayapp/screens/Motion.cpp
         displayapp/screens/Weather.cpp
         displayapp/screens/Calculator.cpp
+        displayapp/screens/Pomodoro.cpp
+        displayapp/screens/CookingTimer.cpp
+        displayapp/screens/BubbleLevel.cpp
+        displayapp/screens/HomeAssistantLights.cpp
+        displayapp/screens/HomeAssistantSwitches.cpp
+        displayapp/screens/HomeAssistantThermostat.cpp
+        displayapp/screens/HomeAssistantTemperatures.cpp
+        displayapp/screens/HomeAssistantBtRestart.cpp
         displayapp/screens/FirmwareValidation.cpp
         displayapp/screens/ApplicationList.cpp
         displayapp/screens/Notifications.cpp
@@ -393,6 +401,7 @@ list(APPEND SOURCE_FILES
         displayapp/screens/Steps.cpp
         displayapp/screens/Timer.cpp
         displayapp/screens/Dice.cpp
+        displayapp/screens/Breakout.cpp
         displayapp/screens/PassKey.cpp
         displayapp/screens/Error.cpp
         displayapp/screens/Alarm.cpp
@@ -432,6 +441,8 @@ list(APPEND SOURCE_FILES
         displayapp/screens/WatchFaceNumerals.cpp
         displayapp/screens/WatchFacePrideFlag.cpp
         displayapp/screens/WatchFaceLegend.cpp
+        displayapp/screens/WatchFaceLights.cpp
+        displayapp/screens/WatchFacePolygons.cpp
 
         ##
 
@@ -468,10 +479,13 @@ list(APPEND SOURCE_FILES
         components/ble/ServiceDiscovery.cpp
         components/ble/HeartRateService.cpp
         components/ble/MotionService.cpp
+        components/ble/HomeAssistantService.cpp
         components/firmwarevalidator/FirmwareValidator.cpp
         components/motor/MotorController.cpp
         components/settings/Settings.cpp
         components/timer/Timer.cpp
+        components/pomodoro/PomodoroController.cpp
+        components/cookingtimer/CookingTimerController.cpp
         components/stopwatch/StopWatchController.cpp
         components/alarm/AlarmController.cpp
         components/fs/FS.cpp
@@ -539,9 +553,12 @@ list(APPEND RECOVERY_SOURCE_FILES
         components/ble/NavigationService.cpp
         components/ble/HeartRateService.cpp
         components/ble/MotionService.cpp
+        components/ble/HomeAssistantService.cpp
         components/firmwarevalidator/FirmwareValidator.cpp
         components/settings/Settings.cpp
         components/timer/Timer.cpp
+        components/pomodoro/PomodoroController.cpp
+        components/cookingtimer/CookingTimerController.cpp
         components/stopwatch/StopWatchController.cpp
         components/alarm/AlarmController.cpp
         drivers/Cst816s.cpp
@@ -620,6 +637,7 @@ set(INCLUDE_FILES
         displayapp/screens/Motion.h
         displayapp/screens/Timer.h
         displayapp/screens/Dice.h
+        displayapp/screens/Breakout.h
         displayapp/screens/Alarm.h
         displayapp/Colors.h
         displayapp/widgets/Counter.h
@@ -901,6 +919,16 @@ target_compile_options(lvgl PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>: ${CXX_FLAGS}>
         $<$<COMPILE_LANGUAGE:ASM>: ${ASM_FLAGS}>
         )
+
+set_source_files_properties(
+        displayapp/screens/Breakout.cpp
+        displayapp/screens/WatchFaceLights.cpp
+        displayapp/screens/WatchFacePolygons.cpp
+        libs/lvgl/src/lv_draw/lv_draw_blend.c
+        libs/lvgl/src/lv_draw/lv_draw_line.c
+        libs/lvgl/src/lv_draw/lv_draw_rect.c
+        PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:RELEASE>:-O2>"
+)
 
 # LITTLEFS_SRC
 add_library(littlefs STATIC ${LITTLEFS_SRC})

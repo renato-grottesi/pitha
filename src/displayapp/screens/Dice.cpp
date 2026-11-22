@@ -4,6 +4,7 @@
 #include "components/settings/Settings.h"
 #include "components/motor/MotorController.h"
 #include "components/motion/MotionController.h"
+#include <cstdio>
 
 using namespace Pinetime::Applications::Screens;
 
@@ -37,6 +38,16 @@ namespace {
       screen->Roll();
     }
   }
+
+  struct SavedDiceState {
+    bool valid = false;
+    int n = 1;
+    int d = 6;
+    uint8_t colorIndex = 0;
+    char total[8] {};
+    char individual[32] {};
+  };
+  SavedDiceState savedState {};
 }
 
 Dice::Dice(Controllers::MotionController& motionController,
@@ -73,14 +84,15 @@ Dice::Dice(Controllers::MotionController& motionController,
 
   nCounter.Create();
   lv_obj_align(nCounter.GetObject(), nCounterLabel, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
-  nCounter.SetValue(1);
+  nCounter.SetValue(savedState.valid ? savedState.n : 1);
 
   dCounter.Create();
   lv_obj_align(dCounter.GetObject(), dCounterLabel, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
-  dCounter.SetValue(6);
+  dCounter.SetValue(savedState.valid ? savedState.d : 6);
 
   std::uniform_int_distribution<> distrib(0, resultColors.size() - 1);
-  currentColorIndex = distrib(gen);
+  currentColorIndex =
+    savedState.valid ? static_cast<uint8_t>(savedState.colorIndex % resultColors.size()) : static_cast<uint8_t>(distrib(gen));
 
   resultTotalLabel = MakeLabel(&jetbrains_mono_42,
                                resultColors[currentColorIndex],
@@ -103,7 +115,12 @@ Dice::Dice(Controllers::MotionController& motionController,
                                     0,
                                     10);
 
-  Roll();
+  if (savedState.valid) {
+    lv_label_set_text(resultTotalLabel, savedState.total);
+    lv_label_set_text(resultIndividualLabel, savedState.individual);
+  } else {
+    Roll();
+  }
   openingRoll = false;
 
   btnRoll = lv_btn_create(lv_scr_act(), nullptr);
@@ -132,6 +149,15 @@ Dice::Dice(Controllers::MotionController& motionController,
 }
 
 Dice::~Dice() {
+  savedState.valid = true;
+  savedState.n = nCounter.GetValue();
+  savedState.d = dCounter.GetValue();
+  savedState.colorIndex = currentColorIndex;
+  const char* totalText = lv_label_get_text(resultTotalLabel);
+  const char* individualText = lv_label_get_text(resultIndividualLabel);
+  std::snprintf(savedState.total, sizeof(savedState.total), "%s", (totalText != nullptr) ? totalText : "");
+  std::snprintf(savedState.individual, sizeof(savedState.individual), "%s", (individualText != nullptr) ? individualText : "");
+
   // reset the shake to wake mode.
   if (enableShakeForDice) {
     settingsController.setWakeUpMode(Pinetime::Controllers::Settings::WakeUpMode::Shake, false);

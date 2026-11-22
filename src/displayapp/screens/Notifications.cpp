@@ -73,7 +73,7 @@ void Notifications::Refresh() {
     int32_t pos = LV_HOR_RES - ((tick - timeoutTickCountStart) / (timeoutLength / LV_HOR_RES));
     if (pos <= 0) {
       running = false;
-    } else {
+    } else if (pos != timeoutLinePoints[1].x) {
       timeoutLinePoints[1].x = pos;
       lv_line_set_points(timeoutLine, timeoutLinePoints, 2);
     }

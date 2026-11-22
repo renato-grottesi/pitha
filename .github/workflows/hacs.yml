@@ -1,0 +1,33 @@
+name: Validate Home Assistant Integration
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'hacs.json'
+      - 'custom_components/**'
+      - '.github/workflows/hacs.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'hacs.json'
+      - 'custom_components/**'
+      - '.github/workflows/hacs.yml'
+  workflow_dispatch:
+
+jobs:
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: HACS Validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hassfest Validation
+        uses: home-assistant/actions/hassfest@master

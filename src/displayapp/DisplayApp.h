@@ -13,6 +13,8 @@
 #include "components/settings/Settings.h"
 #include "displayapp/screens/Screen.h"
 #include "components/timer/Timer.h"
+#include "components/pomodoro/PomodoroController.h"
+#include "components/cookingtimer/CookingTimerController.h"
 #include "components/stopwatch/StopWatchController.h"
 #include "components/alarm/AlarmController.h"
 #include "touchhandler/TouchHandler.h"
@@ -81,6 +83,7 @@ namespace Pinetime {
       void Register(Pinetime::Controllers::SimpleWeatherService* weatherService);
       void Register(Pinetime::Controllers::MusicService* musicService);
       void Register(Pinetime::Controllers::NavigationService* NavigationService);
+      void Register(Pinetime::Controllers::HomeAssistantService* haService);
 
     private:
       Pinetime::Drivers::St7789& lcd;
@@ -105,6 +108,8 @@ namespace Pinetime {
       Pinetime::Controllers::FirmwareValidator validator;
       Pinetime::Components::LittleVgl lvgl;
       Pinetime::Controllers::Timer timer;
+      Pinetime::Controllers::PomodoroController pomodoroController;
+      Pinetime::Controllers::CookingTimerController cookingTimerController;
 
       AppControllers controllers;
       TaskHandle_t taskHandle;
@@ -140,6 +145,8 @@ namespace Pinetime {
       Utility::StaticStack<FullRefreshDirections, returnAppStackSize> appStackDirections;
 
       bool isDimmed = false;
+      TickType_t sleepEntryTick = 0;
+      bool canReturnToClockOnWake = false;
 
       TickType_t CalculateSleepTime();
       TickType_t alwaysOnFrameCount;

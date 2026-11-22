@@ -45,16 +45,17 @@ namespace Pinetime {
       Pinetime::Drivers::St7789& lcd;
       Pinetime::Controllers::FS& filesystem;
 
+      static constexpr uint8_t nbWriteLines = 8;
+      static constexpr uint16_t totalNbLines = 320;
+      static constexpr uint16_t visibleNbLines = 240;
+
       lv_disp_buf_t disp_buf_2;
-      lv_color_t buf2_1[LV_HOR_RES_MAX * 4];
-      lv_color_t buf2_2[LV_HOR_RES_MAX * 4];
+      lv_color_t buf2_1[LV_HOR_RES_MAX * nbWriteLines];
+      lv_color_t buf2_2[LV_HOR_RES_MAX * nbWriteLines];
 
       lv_disp_drv_t disp_drv;
 
       bool fullRefresh = false;
-      static constexpr uint8_t nbWriteLines = 4;
-      static constexpr uint16_t totalNbLines = 320;
-      static constexpr uint16_t visibleNbLines = 240;
 
       static constexpr uint8_t MaxScrollOffset() {
         return LV_VER_RES_MAX - nbWriteLines;

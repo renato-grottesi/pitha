@@ -29,7 +29,21 @@ namespace Pinetime {
       Calculator,
       Steps,
       Dice,
+      Breakout,
       Weather,
+      Pomodoro,
+      CookingTimer,
+      BubbleLevel,
+      TimeMenu,
+      GamesMenu,
+      ExerciseMenu,
+      UtilitiesMenu,
+      HomeAssistantMenu,
+      HaLights,
+      HaSwitches,
+      HaThermostat,
+      HaTemperatures,
+      HaBtRestart,
       PassKey,
       QuickSettings,
       Settings,
@@ -58,6 +72,8 @@ namespace Pinetime {
       Numerals,
       PrideFlag,
       Legend,
+      Lights,
+      Polygons,
     };
 
     template <Apps>
@@ -72,6 +88,11 @@ namespace Pinetime {
     };
 
     using UserAppTypes = TypeList<@USERAPP_TYPES@>;
+    using TimeAppTypes = TypeList<Apps::Pomodoro, Apps::StopWatch, Apps::Alarm, Apps::Timer, Apps::CookingTimer>;
+    using GameAppTypes = TypeList<Apps::Paddle, Apps::Twos, Apps::Dice, Apps::Breakout>;
+    using ExerciseAppTypes = TypeList<Apps::HeartRate, Apps::Steps>;
+    using UtilitiesAppTypes = TypeList<Apps::Metronome, Apps::Calculator, Apps::BubbleLevel>;
+    using HomeAssistantAppTypes = TypeList<Apps::HaLights, Apps::HaSwitches, Apps::HaThermostat, Apps::HaTemperatures, Apps::HaBtRestart>;
 
     template <WatchFace... Ws>
     struct WatchFaceTypeList {
