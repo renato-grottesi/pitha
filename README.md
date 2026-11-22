@@ -1,6 +1,6 @@
 <div align="center">
 
-![Header Image](doc/logo/watchface_collage.png)
+![PITHA Banner](doc/logo/pitha_banner.png)
 
 <br>
 
